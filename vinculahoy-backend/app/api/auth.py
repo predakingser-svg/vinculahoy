@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import uuid
+from pathlib import Path
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
 from app.config import settings
-from app.models.user import User, UserRole, AprendizProfile
+from app.models.user import User, UserRole, VerificationStatus, AprendizProfile
 from app.models.location import WorkCenter, make_geo_point
 from app.schemas.auth import LoginRequest, Token
 from app.schemas.user import AprendizRegister, WorkCenterRegister, UserResponse
@@ -14,11 +16,48 @@ from app.api.deps import get_current_user
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 
+@router.post("/upload-ficha")
+async def upload_program_file(file: UploadFile = File(...)):
+    """
+    Sube la Ficha del Programa Jóvenes Construyendo el Futuro (PDF o Imagen).
+    Valida el formato y retorna la URL pública asignada.
+    """
+    allowed_types = ["application/pdf", "image/png", "image/jpeg", "image/jpg", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Formato de archivo '{file.content_type}' no permitido. Solo se aceptan PDF o imágenes (PNG, JPG, WEBP)."
+        )
+
+    upload_dir = Path("uploads/program_files")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    extension = Path(file.filename or "archivo").suffix or (".pdf" if file.content_type == "application/pdf" else ".png")
+    file_id = f"{uuid.uuid4().hex[:12]}{extension}"
+    dest_path = upload_dir / file_id
+
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:  # Máximo 10 MB
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo excede el tamaño máximo permitido de 10 MB."
+        )
+
+    dest_path.write_bytes(contents)
+
+    return {
+        "message": "Ficha del programa cargada exitosamente",
+        "program_file_url": f"/static/uploads/{file_id}",
+        "filename": file.filename,
+        "content_type": file.content_type
+    }
+
+
 @router.post("/register/aprendiz", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register_aprendiz(payload: AprendizRegister, db: AsyncSession = Depends(get_db)):
     """
     Registro para aprendices del programa Jóvenes Construyendo el Futuro.
-    Crea la cuenta de usuario y su perfil formativo con habilidades y radio de movilidad.
+    Crea la cuenta de usuario con ficha del programa y perfil formativo.
     """
     # Verificar si el correo ya existe
     existing_user = await db.scalar(select(User).where(User.email == payload.email.lower()))
@@ -28,11 +67,13 @@ async def register_aprendiz(payload: AprendizRegister, db: AsyncSession = Depend
             detail="El correo electrónico ya se encuentra registrado"
         )
 
-    # Crear usuario base
+    # Crear usuario base con Ficha del Programa y estado PENDING
     new_user = User(
         email=payload.email.lower(),
         hashed_password=get_password_hash(payload.password),
         role=UserRole.APRENDIZ,
+        program_file_url=payload.program_file_url,
+        verification_status=VerificationStatus.PENDING,
         is_active=True
     )
     db.add(new_user)
@@ -67,7 +108,7 @@ async def register_aprendiz(payload: AprendizRegister, db: AsyncSession = Depend
 async def register_work_center(payload: WorkCenterRegister, db: AsyncSession = Depends(get_db)):
     """
     Registro para Centros de Trabajo (empresas, talleres, comercios y organizaciones).
-    Registra coordenadas geográficas y geolocalización PostGIS para búsqueda por radio.
+    Registra coordenadas geográficas, Ficha del Programa y geolocalización PostGIS.
     """
     existing_user = await db.scalar(select(User).where(User.email == payload.email.lower()))
     if existing_user:
@@ -80,6 +121,8 @@ async def register_work_center(payload: WorkCenterRegister, db: AsyncSession = D
         email=payload.email.lower(),
         hashed_password=get_password_hash(payload.password),
         role=UserRole.CENTRO_TRABAJO,
+        program_file_url=payload.program_file_url,
+        verification_status=VerificationStatus.PENDING,
         is_active=True
     )
     db.add(new_user)

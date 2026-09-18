@@ -133,12 +133,13 @@ async def seed_initial_data():
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
-    Ciclo de vida de la aplicación: inicializa modelos de BD y datos de prueba.
+    Ciclo de vida de la aplicación: inicializa modelos de BD con tabla 100% vacía en producción.
     """
     print(f"[*] Iniciando {settings.PROJECT_NAME}...")
     try:
         await init_db()
-        await seed_initial_data()
+        # BASE DE DATOS 100% VACÍA: No se ejecutan datos de prueba (seed data)
+        print("[*] Base de datos verificada y lista (100% vacía para producción).")
     except Exception as exc:
         print(f"[Aviso] No se pudo inicializar la BD durante el arranque: {exc}")
     yield
@@ -214,6 +215,14 @@ async def metadata():
         "geo_srid": 4326,
         "default_radius_km": 5.0
     }
+
+
+# ------------------------------------------------------------------------------
+# MONTAJE DE ARCHIVOS ESTÁTICOS Y SUBIDAS (Fichas del programa)
+# ------------------------------------------------------------------------------
+uploads_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "uploads", "program_files"))
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/static/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 
 # ------------------------------------------------------------------------------

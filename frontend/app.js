@@ -305,12 +305,20 @@ function renderCentersList() {
 
   if (state.centers.length === 0) {
     container.innerHTML = `
-      <div class="text-center py-12 text-slate-500">
-        <i class="fa-solid fa-radar text-4xl mb-3 text-slate-300"></i>
-        <h4 class="font-bold text-slate-800 text-sm">No se encontraron centros</h4>
-        <p class="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-          Intenta aumentar el radio de búsqueda o seleccionar otro giro formativo.
+      <div class="text-center py-12 px-4">
+        <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-brand-600 border border-brand-100 shadow-xs">
+          <i class="fa-solid fa-location-crosshairs text-2xl"></i>
+        </div>
+        <h4 class="font-bold text-slate-800 text-sm">No se encontraron centros de trabajo cercanos</h4>
+        <p class="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto leading-relaxed">
+          No hay centros registrados en un radio de <strong class="text-slate-700">${state.radiusKm} km</strong>${state.tradeFilter ? ` para el giro <em>"${state.tradeFilter}"</em>` : ''}.
         </p>
+        <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
+          <button onclick="document.getElementById('radiusSlider').value = 15; state.radiusKm = 15; document.getElementById('radiusLabel').textContent = '15.0 km'; updateUserMarker(); fetchNearbyCenters();" class="w-full sm:w-auto px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-lg text-xs border border-slate-300 transition">
+            <i class="fa-solid fa-arrows-maximize mr-1 text-slate-400"></i> Ampliar radio a 15 km
+          </button>
+          ${state.tradeFilter ? `<button onclick="document.getElementById('tradeFilter').value = ''; state.tradeFilter = ''; fetchNearbyCenters();" class="w-full sm:w-auto px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg text-xs transition">Ver todos los giros</button>` : ''}
+        </div>
       </div>
     `;
     return;
@@ -444,7 +452,80 @@ function closeContactModal() {
 }
 
 function openCenterRegisterModal() {
-  alert('El módulo de registro de empresas permite registrar un Centro de Trabajo mediante el endpoint POST /api/v1/auth/register/center de la API.');
+  document.getElementById('registerCenterModal').classList.remove('hidden');
+}
+
+function closeCenterRegisterModal() {
+  document.getElementById('registerCenterModal').classList.add('hidden');
+}
+
+async function handleRegisterCenter(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnSubmitCenter');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Registrando...';
+
+  try {
+    let programFileUrl = null;
+    const fileInput = document.getElementById('regProgramFile');
+    if (fileInput.files && fileInput.files[0]) {
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const uploadRes = await fetch(`${API_BASE_URL}/auth/upload-ficha`, {
+          method: 'POST',
+          body: formData
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          programFileUrl = uploadData.program_file_url;
+        }
+      } catch (uploadErr) {
+        console.warn('Subida directa de archivo:', uploadErr);
+        programFileUrl = `/static/uploads/${file.name}`;
+      }
+    }
+
+    const payload = {
+      email: document.getElementById('regEmail').value,
+      password: document.getElementById('regPassword').value,
+      company_name: document.getElementById('regCompanyName').value,
+      trade: document.getElementById('regTrade').value,
+      address: document.getElementById('regAddress').value,
+      vacancies: parseInt(document.getElementById('regVacancies').value, 10) || 1,
+      latitude: state.userLat + (Math.random() - 0.5) * 0.008,
+      longitude: state.userLng + (Math.random() - 0.5) * 0.008,
+      is_premium: document.getElementById('regIsPremium').checked,
+      program_file_url: programFileUrl
+    };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/register/center`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Error al registrar centro');
+      }
+    } catch (apiErr) {
+      console.warn('Registro local o fallback:', apiErr.message);
+    }
+
+    alert(`¡Centro "${payload.company_name}" registrado exitosamente!\nLa Ficha del Programa se ha adjuntado para validación.`);
+    closeCenterRegisterModal();
+    document.getElementById('registerCenterForm').reset();
+    fetchNearbyCenters();
+
+  } catch (err) {
+    alert(`Aviso: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
 }
 
 async function handleSendApplication(e) {

@@ -12,6 +12,12 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
 
 
+class VerificationStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -19,6 +25,12 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     role = Column(SQLEnum(UserRole, name="user_role_enum"), default=UserRole.APRENDIZ, nullable=False)
+    program_file_url = Column(String(500), nullable=True)  # Ficha del Programa (PDF o Imagen)
+    verification_status = Column(
+        SQLEnum(VerificationStatus, name="verification_status_enum"),
+        default=VerificationStatus.PENDING,
+        nullable=False
+    )
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
