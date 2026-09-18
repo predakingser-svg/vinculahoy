@@ -1,14 +1,13 @@
 import pytest
 import httpx
-from app.main import app, seed_initial_data
+from app.main import app
 from app.database import init_db
 
 
 @pytest.mark.asyncio
 async def test_full_pipeline():
-    # 1. Inicialización
+    # 1. Inicialización (Base de datos limpia)
     await init_db()
-    await seed_initial_data()
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
