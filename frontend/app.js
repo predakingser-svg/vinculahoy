@@ -90,95 +90,9 @@ function updateUserMarker() {
 }
 
 // =============================================================================
-// DATOS DE RESPALDO / MODO DEMO EN VIVO
-// Permite que la plataforma sea 100% interactiva en despliegue estático y producción
+// DATOS INICIALES (BASE DE DATOS 100% LIMPIA EN PRODUCCIÓN)
 // =============================================================================
-const DEMO_CENTERS = [
-  {
-    id: "demo-tech-1",
-    company_name: "TechInnovadores México (SaaS & Cloud)",
-    trade: "Tecnología de la Información",
-    description: "Formación integral en desarrollo web, soporte en la nube y análisis de datos para aprendices proactivos.",
-    address: "Av. Insurgentes Sur 601, Nápoles, Benito Juárez, CDMX",
-    contact_email: "rh@techinnovadores.mx",
-    contact_phone: "+52 55 1234 5678",
-    vacancies: 4,
-    is_verified: true,
-    is_premium: true,
-    latitude: 19.3954,
-    longitude: -99.1728
-  },
-  {
-    id: "demo-design-2",
-    company_name: "Taller Creativo Gráfico & Digital",
-    trade: "Diseño y Publicidad",
-    description: "Capacitación práctica en diseño editorial, redes sociales y producción gráfica.",
-    address: "Colima 180, Roma Norte, Cuauhtémoc, CDMX",
-    contact_email: "hola@tallercreativo.mx",
-    contact_phone: "+52 55 8765 4321",
-    vacancies: 2,
-    is_verified: true,
-    is_premium: true,
-    latitude: 19.4187,
-    longitude: -99.1623
-  },
-  {
-    id: "demo-finance-3",
-    company_name: "Consultoría Contable & Financiera Juárez",
-    trade: "Administración y Finanzas",
-    description: "Prácticas en facturación electrónica, declaraciones y conciliación bancaria.",
-    address: "Paseo de la Reforma 250, Juárez, Cuauhtémoc, CDMX",
-    contact_email: "empleos@consultoriajuarez.com",
-    contact_phone: "+52 55 3344 5566",
-    vacancies: 3,
-    is_verified: true,
-    is_premium: false,
-    latitude: 19.4270,
-    longitude: -99.1670
-  },
-  {
-    id: "demo-mechanic-4",
-    company_name: "Taller Mecánico & Diagnóstico Automotriz Rápido",
-    trade: "Mecánica y Mantenimiento",
-    description: "Mantenimiento preventivo, escáner OBD-II y afinación general multimarca.",
-    address: "Eje Central Lázaro Cárdenas 412, Alamos, Benito Juárez, CDMX",
-    contact_email: "contacto@mecanicarapida.mx",
-    contact_phone: "+52 55 7788 9900",
-    vacancies: 2,
-    is_verified: true,
-    is_premium: false,
-    latitude: 19.3980,
-    longitude: -99.1450
-  },
-  {
-    id: "demo-food-5",
-    company_name: "Cafetería & Panadería Artesanal El Sol",
-    trade: "Servicios y Alimentos",
-    description: "Barismo profesional, repostería artesanal y atención a clientes de alta calidad.",
-    address: "Álvaro Obregón 90, Roma Norte, Cuauhtémoc, CDMX",
-    contact_email: "contacto@cafeteriaelsol.mx",
-    contact_phone: "+52 55 4433 2211",
-    vacancies: 5,
-    is_verified: true,
-    is_premium: true,
-    latitude: 19.4172,
-    longitude: -99.1585
-  },
-  {
-    id: "demo-health-6",
-    company_name: "Centro Odontológico Integral Condesa",
-    trade: "Salud y Cuidado",
-    description: "Asistencia dental, esterilización de instrumental y recepción de pacientes.",
-    address: "Av. Michoacán 45, Condesa, Cuauhtémoc, CDMX",
-    contact_email: "clinica@dentalcondesa.mx",
-    contact_phone: "+52 55 9988 1122",
-    vacancies: 1,
-    is_verified: true,
-    is_premium: false,
-    latitude: 19.4115,
-    longitude: -99.1740
-  }
-];
+const DEMO_CENTERS = [];
 
 function calculateHaversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371; // Radio de la Tierra en km
@@ -193,7 +107,7 @@ function calculateHaversineKm(lat1, lon1, lat2, lon2) {
 }
 
 // =============================================================================
-// CONSUMO DE API: /api/v1/centers/nearby (POSTGIS) CON FALLBACK INTERACTIVO
+// CONSUMO DE API: /api/v1/centers/nearby (POSTGIS)
 // =============================================================================
 async function fetchNearbyCenters() {
   const loader = document.getElementById('mapLoader');
@@ -217,26 +131,10 @@ async function fetchNearbyCenters() {
     renderCentersList();
 
   } catch (error) {
-    // Si el backend aún no está activo o estamos en GitHub Pages / Cloudflare Pages estático:
-    console.info('Utilizando catálogo de datos interactivo local/fallback:', error.message);
-    
-    // Calcular distancia Haversine y filtrar según radio y giro
-    const filtered = DEMO_CENTERS
-      .map(c => ({
-        ...c,
-        distance_km: calculateHaversineKm(state.userLat, state.userLng, c.latitude, c.longitude)
-      }))
-      .filter(c => c.distance_km <= state.radiusKm)
-      .filter(c => !state.tradeFilter || c.trade === state.tradeFilter)
-      .sort((a, b) => {
-        // Primero destacados (Freemium), luego por menor distancia
-        if (a.is_premium && !b.is_premium) return -1;
-        if (!a.is_premium && b.is_premium) return 1;
-        return a.distance_km - b.distance_km;
-      });
-
-    state.centers = filtered;
-    document.getElementById('totalCenters').textContent = filtered.length;
+    // La base de datos está limpia o no hay conexión: muestra estado vacío limpiamente
+    console.warn('Consulta de centros:', error.message);
+    state.centers = [];
+    document.getElementById('totalCenters').textContent = '0';
     renderMarkers();
     renderCentersList();
 
@@ -284,8 +182,8 @@ function renderMarkers() {
           <span class="text-xs font-semibold text-slate-700">
             <i class="fa-solid fa-users text-slate-400 mr-1"></i> ${center.vacancies} vacantes
           </span>
-          <button onclick="openContactModal('${center.id}')" class="text-xs bg-brand-600 hover:bg-brand-700 text-white font-semibold px-2.5 py-1.5 rounded-lg transition">
-            Postularme
+          <button onclick="handleCenterConnect('${center.id}')" class="text-xs bg-brand-600 hover:bg-brand-700 text-white font-semibold px-2.5 py-1.5 rounded-lg transition">
+            Contactar
           </button>
         </div>
       </div>
@@ -309,9 +207,9 @@ function renderCentersList() {
         <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-brand-600 border border-brand-100 shadow-xs">
           <i class="fa-solid fa-location-crosshairs text-2xl"></i>
         </div>
-        <h4 class="font-bold text-slate-800 text-sm">No se encontraron centros de trabajo cercanos</h4>
+        <h4 class="font-bold text-slate-800 text-sm">Aún no hay centros de trabajo registrados en esta zona</h4>
         <p class="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto leading-relaxed">
-          No hay centros registrados en un radio de <strong class="text-slate-700">${state.radiusKm} km</strong>${state.tradeFilter ? ` para el giro <em>"${state.tradeFilter}"</em>` : ''}.
+          No se encontraron centros en un radio de <strong class="text-slate-700">${state.radiusKm} km</strong>${state.tradeFilter ? ` para el giro <em>"${state.tradeFilter}"</em>` : ''}. Prueba ampliando el radio o cambia el filtro de giro.
         </p>
         <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
           <button onclick="document.getElementById('radiusSlider').value = 15; state.radiusKm = 15; document.getElementById('radiusLabel').textContent = '15.0 km'; updateUserMarker(); fetchNearbyCenters();" class="w-full sm:w-auto px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-lg text-xs border border-slate-300 transition">
@@ -372,8 +270,8 @@ function renderCentersList() {
         <span class="text-xs text-slate-600 font-medium">
           <strong class="text-slate-900 font-bold">${center.vacancies}</strong> vacante(s) disponible(s)
         </span>
-        <button onclick="event.stopPropagation(); openContactModal('${center.id}')" class="text-xs bg-slate-900 hover:bg-brand-600 text-white font-semibold px-3 py-1.5 rounded-lg transition shadow-xs">
-          Vincularme
+        <button onclick="event.stopPropagation(); handleCenterConnect('${center.id}')" class="text-xs bg-slate-900 hover:bg-brand-600 text-white font-semibold px-3 py-1.5 rounded-lg transition shadow-xs">
+          Vincular
         </button>
       </div>
     `;
@@ -436,7 +334,27 @@ function handleGetGeolocation() {
 // =============================================================================
 // MODALES Y ACCIONES
 // =============================================================================
+function handleCenterConnect(centerId) {
+  // FLUJO DE VINCULACIÓN EN MODO INVITADO:
+  // Si el usuario actual está en MODO INVITADO (sin token JWT activo):
+  // 1. Cancela la acción de envío de mensaje/vinculación.
+  // 2. Dispara automáticamente la apertura del modal de "Iniciar Sesión / Registro".
+  const token = localStorage.getItem('vinculahoy_token');
+  if (!token) {
+    openLoginModal();
+    return;
+  }
+  openContactModal(centerId);
+}
+
 function openContactModal(centerId) {
+  // MODO INVITADO: Intercepta y cancela, abriendo inicio de sesión
+  const token = localStorage.getItem('vinculahoy_token');
+  if (!token) {
+    openLoginModal();
+    return;
+  }
+
   const center = state.centers.find(c => c.id === centerId);
   if (!center) return;
 
@@ -463,6 +381,12 @@ function closeCenterRegisterModal() {
 // MODAL: PLANES DE SUSCRIPCIÓN (FREEMIUM / DESTACADO)
 // =============================================================================
 function openSubscriptionPlansModal() {
+  // VISIBILIDAD CONDICIONAL: SOLO si la sesión activa tiene el rol CENTRO_TRABAJO
+  const token = localStorage.getItem('vinculahoy_token');
+  const userRole = (localStorage.getItem('vinculahoy_user_role') || '').toUpperCase();
+  if (!token || userRole !== 'CENTRO_TRABAJO') {
+    return;
+  }
   document.getElementById('subscriptionPlansModal').classList.remove('hidden');
 }
 
@@ -495,7 +419,7 @@ function chooseRole(role) {
   if (role === 'aprendiz') {
     openAprendizRegisterModal();
   } else if (role === 'center') {
-    openSubscriptionPlansModal();
+    openCenterRegisterModal();
   }
 }
 
@@ -650,12 +574,20 @@ async function checkAuthStatus() {
   const token = localStorage.getItem('vinculahoy_token');
   const guestNav = document.getElementById('guestAuthNav');
   const userNav = document.getElementById('userAuthNav');
+  const ctaBanner = document.getElementById('ctaDestacaBanner');
+  const navPlansBtn = document.getElementById('navPlansBtn');
 
   if (!token) {
     if (guestNav) guestNav.classList.remove('hidden');
     if (userNav) {
       userNav.classList.add('hidden');
       userNav.classList.remove('flex');
+    }
+    // MODO INVITADO: Ocultar banner promocional y menú de planes
+    if (ctaBanner) ctaBanner.classList.add('hidden');
+    if (navPlansBtn) {
+      navPlansBtn.classList.add('hidden');
+      navPlansBtn.classList.remove('inline-flex', 'flex');
     }
     return;
   }
@@ -668,12 +600,20 @@ async function checkAuthStatus() {
     });
 
     if (!res.ok) {
-      // Token inválido o expirado
+      // Token inválido o expirado -> Regresar a modo invitado
       localStorage.removeItem('vinculahoy_token');
+      localStorage.removeItem('vinculahoy_user_email');
+      localStorage.removeItem('vinculahoy_user_role');
+      localStorage.removeItem('vinculahoy_user_status');
       if (guestNav) guestNav.classList.remove('hidden');
       if (userNav) {
         userNav.classList.add('hidden');
         userNav.classList.remove('flex');
+      }
+      if (ctaBanner) ctaBanner.classList.add('hidden');
+      if (navPlansBtn) {
+        navPlansBtn.classList.add('hidden');
+        navPlansBtn.classList.remove('inline-flex', 'flex');
       }
       return;
     }
@@ -688,9 +628,20 @@ async function checkAuthStatus() {
     if (cachedEmail) {
       renderUserNavbar({
         email: cachedEmail,
-        role: cachedRole || 'aprendiz',
+        role: cachedRole || 'APRENDIZ',
         verification_status: cachedStatus
       });
+    } else {
+      if (guestNav) guestNav.classList.remove('hidden');
+      if (userNav) {
+        userNav.classList.add('hidden');
+        userNav.classList.remove('flex');
+      }
+      if (ctaBanner) ctaBanner.classList.add('hidden');
+      if (navPlansBtn) {
+        navPlansBtn.classList.add('hidden');
+        navPlansBtn.classList.remove('inline-flex', 'flex');
+      }
     }
   }
 }
@@ -701,6 +652,8 @@ function renderUserNavbar(user) {
   const navEmail = document.getElementById('navUserEmail');
   const navRoleBadge = document.getElementById('navUserRoleBadge');
   const navVerifyBadge = document.getElementById('navUserVerifyBadge');
+  const ctaBanner = document.getElementById('ctaDestacaBanner');
+  const navPlansBtn = document.getElementById('navPlansBtn');
 
   if (guestNav) guestNav.classList.add('hidden');
   if (userNav) {
@@ -710,8 +663,11 @@ function renderUserNavbar(user) {
 
   if (navEmail) navEmail.textContent = user.email;
 
+  const normalizedRole = (user.role || '').toUpperCase();
+  const isCentroTrabajo = normalizedRole === 'CENTRO_TRABAJO';
+
   if (navRoleBadge) {
-    const roleLabel = user.role === 'centro_trabajo' ? 'Centro' : (user.role === 'administrador' ? 'Admin' : 'Aprendiz');
+    const roleLabel = isCentroTrabajo ? 'Centro' : (normalizedRole === 'ADMIN' ? 'Admin' : 'Aprendiz');
     navRoleBadge.textContent = roleLabel;
   }
 
@@ -730,8 +686,25 @@ function renderUserNavbar(user) {
   }
 
   localStorage.setItem('vinculahoy_user_email', user.email);
-  localStorage.setItem('vinculahoy_user_role', user.role);
+  localStorage.setItem('vinculahoy_user_role', normalizedRole);
   localStorage.setItem('vinculahoy_user_status', user.verification_status || 'pending');
+
+  // EVALUACIÓN CONDICIONAL DE VISIBILIDAD (PLANES Y BANNER):
+  // - Si la sesión es de MODO INVITADO o rol APRENDIZ: NO mostrar el banner ni el menú de planes.
+  // - SOLO si la sesión activa tiene el rol CENTRO_TRABAJO: Renderear/activar la visibilidad del banner y opción de Planes.
+  if (isCentroTrabajo) {
+    if (ctaBanner) ctaBanner.classList.remove('hidden');
+    if (navPlansBtn) {
+      navPlansBtn.classList.remove('hidden');
+      navPlansBtn.classList.add('inline-flex');
+    }
+  } else {
+    if (ctaBanner) ctaBanner.classList.add('hidden');
+    if (navPlansBtn) {
+      navPlansBtn.classList.add('hidden');
+      navPlansBtn.classList.remove('inline-flex', 'flex');
+    }
+  }
 }
 
 function handleLogout() {
@@ -742,11 +715,22 @@ function handleLogout() {
 
   const guestNav = document.getElementById('guestAuthNav');
   const userNav = document.getElementById('userAuthNav');
+  const ctaBanner = document.getElementById('ctaDestacaBanner');
+  const navPlansBtn = document.getElementById('navPlansBtn');
+
   if (guestNav) guestNav.classList.remove('hidden');
   if (userNav) {
     userNav.classList.add('hidden');
     userNav.classList.remove('flex');
   }
+
+  // Ocultar banner y menú de planes al cerrar sesión (Modo Invitado)
+  if (ctaBanner) ctaBanner.classList.add('hidden');
+  if (navPlansBtn) {
+    navPlansBtn.classList.add('hidden');
+    navPlansBtn.classList.remove('inline-flex', 'flex');
+  }
+
   alert('Has cerrado sesión correctamente.');
 }
 
