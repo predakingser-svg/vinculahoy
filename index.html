@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VinculaHoy | Vinculación Local Comunitaria de Aprendices</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            },
+            gold: {
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet.js (OpenStreetMap) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Estilos complementarios -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="h-full flex flex-col font-sans text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- =========================================================================
+       AVISO LEGAL OBLIGATORIO (BANNER SUPERIOR)
+  ========================================================================== -->
+  <aside class="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 flex items-center justify-between flex-wrap gap-2">
+    <div class="flex items-center gap-2 max-w-5xl mx-auto text-center md:text-left">
+      <i class="fa-solid fa-scale-balanced text-amber-600 text-sm flex-shrink-0"></i>
+      <span>
+        <strong>Marco Legal:</strong> Plataforma independiente de vinculación comunitaria sin afiliación, patrocinio ni relación oficial con el Gobierno de México o el programa Jóvenes Construyendo el Futuro.
+      </span>
+    </div>
+  </aside>
+
+  <!-- =========================================================================
+       NAVBAR SUPERIOR
+  ========================================================================== -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo y Título -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-emerald-700 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+          <i class="fa-solid fa-map-location-dot text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-black tracking-tight text-slate-900">Vincula<span class="text-brand-600">Hoy</span></h1>
+            <span class="text-[10px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">MVP</span>
+          </div>
+          <p class="text-xs text-slate-500 font-medium hidden sm:block">Conexión temprana Aprendiz - Centro de Trabajo</p>
+        </div>
+      </div>
+
+      <!-- Acciones de Cabecera -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="btnGeoHeader" class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white text-xs sm:text-sm font-semibold px-3 py-2 rounded-lg transition shadow-sm shadow-brand-600/30">
+          <i class="fa-solid fa-location-crosshairs text-sm"></i>
+          <span class="hidden md:inline">Usar mi ubicación</span>
+          <span class="md:hidden">Mi GPS</span>
+        </button>
+
+        <!-- Bloque de Sesión / Autenticación -->
+        <div id="navAuthSection" class="flex items-center gap-1.5 sm:gap-2 border-l border-slate-200 pl-2 sm:pl-3">
+          <!-- Estado Invitado: Iniciar Sesión y Registrarse -->
+          <div id="guestAuthNav" class="flex items-center gap-1.5 sm:gap-2">
+            <button onclick="openLoginModal()" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-brand-700 hover:bg-slate-100 rounded-lg transition">
+              Iniciar Sesión
+            </button>
+            <button onclick="openRoleSelectModal()" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-bold text-white bg-slate-900 hover:bg-brand-600 rounded-lg transition shadow-xs">
+              Registrarse
+            </button>
+          </div>
+
+          <!-- Estado Usuario Autenticado -->
+          <div id="userAuthNav" class="hidden items-center gap-2">
+            <div class="flex flex-col text-right">
+              <span id="navUserEmail" class="text-xs font-bold text-slate-900 truncate max-w-[130px] sm:max-w-[180px]"></span>
+              <div class="flex items-center justify-end gap-1.5 mt-0.5">
+                <span id="navUserRoleBadge" class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 uppercase"></span>
+                <span id="navUserVerifyBadge" class="text-[10px] font-bold px-1.5 py-0.2 rounded"></span>
+              </div>
+            </div>
+            <button onclick="handleLogout()" class="px-2 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg transition ml-1" title="Cerrar Sesión">
+              <i class="fa-solid fa-right-from-bracket"></i>
+              <span class="hidden md:inline ml-1">Salir</span>
+            </button>
+          </div>
+        </div>
+
+        <button id="btnModalInfo" class="text-slate-600 hover:text-slate-900 hover:bg-slate-100 p-2 rounded-lg transition" title="Información y Legal">
+          <i class="fa-solid fa-circle-info text-lg"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       BARRA DE CONTROL Y FILTROS GPS
+  ========================================================================== -->
+  <section class="bg-white border-b border-slate-200 px-4 py-3 shadow-sm z-20">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <!-- Filtro de Radio -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs sm:text-sm">
+          <i class="fa-solid fa-arrows-to-circle text-brand-600"></i>
+          <span class="font-medium text-slate-600">Radio:</span>
+          <span id="radiusLabel" class="font-bold text-slate-900">5.0 km</span>
+          <input id="radiusSlider" type="range" min="1" max="25" step="1" value="5" class="w-24 sm:w-32 accent-brand-600 cursor-pointer ml-1" />
+        </div>
+
+        <!-- Filtro por Giro -->
+        <div class="relative">
+          <select id="tradeFilter" class="appearance-none bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-8 py-1.5 text-xs sm:text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="">Todos los Giros</option>
+            <option value="Tecnología">Tecnología & TI</option>
+            <option value="Administración">Administración & Finanzas</option>
+            <option value="Diseño">Diseño & Publicidad</option>
+            <option value="Servicios">Servicios & Alimentos</option>
+            <option value="Oficios">Oficios & Mantenimiento</option>
+          </select>
+          <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+        </div>
+
+        <!-- Botones de Acceso Rápido a Coordenadas (Demo / Fallback) -->
+        <div class="hidden lg:flex items-center gap-1 text-xs text-slate-500">
+          <span class="text-[11px] font-semibold text-slate-400 uppercase mr-1">Demo:</span>
+          <button class="preset-loc px-2 py-1 bg-slate-100 hover:bg-brand-100 hover:text-brand-800 rounded font-medium transition" data-lat="19.4187" data-lng="-99.1623">CDMX (Roma)</button>
+          <button class="preset-loc px-2 py-1 bg-slate-100 hover:bg-brand-100 hover:text-brand-800 rounded font-medium transition" data-lat="19.3954" data-lng="-99.1728">CDMX (Nápoles)</button>
+          <button class="preset-loc px-2 py-1 bg-slate-100 hover:bg-brand-100 hover:text-brand-800 rounded font-medium transition" data-lat="20.6736" data-lng="-103.3440">Guadalajara</button>
+          <button class="preset-loc px-2 py-1 bg-slate-100 hover:bg-brand-100 hover:text-brand-800 rounded font-medium transition" data-lat="25.6866" data-lng="-100.3161">Monterrey</button>
+        </div>
+      </div>
+
+      <!-- Resumen de Resultados -->
+      <div class="flex items-center justify-between md:justify-end gap-3 text-xs sm:text-sm">
+        <div id="resultsBadge" class="flex items-center gap-1.5 text-slate-600 font-medium">
+          <i class="fa-solid fa-building text-slate-400"></i>
+          <span>Encontrados: <strong id="totalCenters" class="text-brand-600 font-bold">0</strong></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+            <i class="fa-solid fa-star text-amber-500 text-[10px]"></i> Centros Destacados
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       CONTENIDO PRINCIPAL: MAPA + PANEL DE CENTROS
+  ========================================================================== -->
+  <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+    
+    <!-- MAPA LEAFLET -->
+    <div id="mapContainer" class="flex-1 w-full h-[50vh] md:h-full relative z-10 bg-slate-100">
+      <div id="map" class="w-full h-full"></div>
+      
+      <!-- Indicador de Carga sobre Mapa -->
+      <div id="mapLoader" class="absolute inset-0 bg-white/70 backdrop-blur-xs flex items-center justify-center z-[1000] hidden">
+        <div class="flex flex-col items-center gap-2 bg-white px-5 py-4 rounded-xl shadow-xl border border-slate-200">
+          <i class="fa-solid fa-circle-notch fa-spin text-2xl text-brand-600"></i>
+          <span class="text-xs font-semibold text-slate-700">Buscando centros de trabajo cercanos...</span>
+        </div>
+      </div>
+
+      <!-- Control Flotante de Leyenda -->
+      <div class="absolute bottom-4 left-4 z-[999] bg-white/95 backdrop-blur-md rounded-xl p-3 shadow-lg border border-slate-200 text-xs hidden sm:block">
+        <p class="font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+          <i class="fa-solid fa-layer-group text-brand-600"></i> Simbología
+        </p>
+        <div class="flex flex-col gap-1 text-slate-600 text-[11px]">
+          <span class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-blue-600 inline-block border-2 border-white shadow"></span> Tu Ubicación Actual
+          </span>
+          <span class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block border-2 border-white shadow"></span> Centro Destacado
+          </span>
+          <span class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-emerald-600 inline-block border-2 border-white shadow"></span> Centro Estándar
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL LATERAL: LISTA DE CENTROS (DESTACADOS PRIORITARIOS) -->
+    <aside class="w-full md:w-[420px] lg:w-[460px] h-[50vh] md:h-full bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 flex flex-col z-20 shadow-lg">
+      
+      <!-- Encabezado de la Lista -->
+      <div class="p-4 bg-white border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h2 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+            <span>Centros Disponibles</span>
+          </h2>
+          <p class="text-xs text-slate-500">Ordenados por Centros Destacados y Proximidad métrica</p>
+        </div>
+        <button id="btnRefresh" class="text-slate-400 hover:text-brand-600 p-2 rounded-lg transition" title="Recargar">
+          <i class="fa-solid fa-arrows-rotate text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Lista de Centros Scrollable -->
+      <div id="centersList" class="flex-1 overflow-y-auto p-4 space-y-3 divide-y-0">
+        <!-- Tarjetas dinámicas inyectadas por app.js -->
+        <div class="text-center py-12 text-slate-400">
+          <i class="fa-solid fa-location-dot text-4xl mb-3 text-slate-300"></i>
+          <p class="text-sm font-medium">Obteniendo centros de trabajo cercanos...</p>
+          <p class="text-xs text-slate-400 mt-1">Presiona "Usar mi ubicación" para activar el radar GPS.</p>
+        </div>
+      </div>
+
+      <!-- BANNER CTA: DESTACA TU CENTRO DE TRABAJO -->
+      <div class="p-4 bg-gradient-to-br from-amber-50 to-orange-50/70 border-t border-amber-200 text-xs shadow-inner">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
+            <i class="fa-solid fa-star text-xs"></i>
+          </div>
+          <div class="flex-1">
+            <p class="text-slate-800 font-semibold leading-relaxed mb-2.5">
+              ¿Quieres que tu centro sea el primero que vean los aprendices de tu zona? Destaca tu vacante para recibir mensajes de los mejores candidatos cercanos antes que nadie.
+            </p>
+            <button onclick="openSubscriptionPlansModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition shadow-xs">
+              <i class="fa-solid fa-bolt text-[11px]"></i> Destacar mi Centro
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- =========================================================================
+       MODAL: CONTACTO Y POSTULACIÓN DIRECTA
+  ========================================================================== -->
+  <div id="contactModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-handshake"></i>
+          </div>
+          <div>
+            <h3 id="modalCenterName" class="font-bold text-slate-900 text-sm">Postulación al Centro</h3>
+            <p id="modalCenterTrade" class="text-xs text-slate-500">Vinculación temprana</p>
+          </div>
+        </div>
+        <button onclick="closeContactModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="contactForm" onsubmit="handleSendApplication(event)" class="space-y-4">
+        <input type="hidden" id="modalCenterId" value="" />
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre Completo del Aprendiz</label>
+          <input type="text" id="applicantName" required placeholder="Ej. Juan Pérez López" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico</label>
+          <input type="email" id="applicantEmail" required placeholder="correo@ejemplo.com" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Mensaje de Interés / Habilidades formativas</label>
+          <textarea id="applicantMessage" rows="3" required placeholder="Hola, me interesa formarme en su centro en las vacantes de..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="bg-slate-50 p-2.5 rounded-lg text-[11px] text-slate-500">
+          <i class="fa-solid fa-lock text-slate-400 mr-1"></i> Tus datos serán enviados directamente al Centro de Trabajo para iniciar contacto formal.
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onclick="closeContactModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition shadow-md shadow-brand-600/20">Enviar Postulación</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: INFORMACIÓN Y DESCARGO LEGAL
+  ========================================================================== -->
+  <div id="infoModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <h3 class="font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-circle-info text-brand-600"></i> Acerca de VinculaHoy (RedFuturo)
+        </h3>
+        <button onclick="closeInfoModal()" class="text-slate-400 hover:text-slate-700">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      
+      <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
+        <p>
+          <strong>VinculaHoy</strong> es una herramienta de iniciativa civil diseñada para mitigar la barrera de localización geográfica que enfrentan los jóvenes al buscar centros de capacitación en su entorno inmediato.
+        </p>
+
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900">
+          <h4 class="font-bold text-xs flex items-center gap-1.5 mb-1">
+            <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Descargo de Responsabilidad Oficial
+          </h4>
+          <p class="text-[11px]">
+            Plataforma independiente de vinculación comunitaria sin afiliación, patrocinio ni relación oficial con el Gobierno de México o el programa Jóvenes Construyendo el Futuro. Todas las marcas y nombres de programas son propiedad de sus respectivos titulares.
+          </p>
+        </div>
+
+      </div>
+
+      <div class="mt-6 text-right">
+        <button onclick="closeInfoModal()" class="px-5 py-2 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-lg">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: PLANES DE SUSCRIPCIÓN PARA CENTROS DE TRABAJO
+  ========================================================================== -->
+  <div id="subscriptionPlansModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
+            <i class="fa-solid fa-gem text-amber-500"></i> Planes para Centros de Trabajo
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">Elige cómo deseas publicar tus vacantes de capacitación en tu zona</p>
+        </div>
+        <button onclick="closeSubscriptionPlansModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+        <!-- Plan Base Gratuito -->
+        <div class="border border-slate-200 rounded-xl p-5 bg-white flex flex-col justify-between hover:border-slate-300 transition shadow-xs">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">Básico</span>
+              <span class="text-xl font-black text-slate-900">$0 <span class="text-xs font-normal text-slate-500">MXN</span></span>
+            </div>
+            <h4 class="font-bold text-slate-900 text-sm sm:text-base mb-2">Plan Base Gratuito</h4>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+              Publica tu vacante en el radar comunitario según distancia métrica. Ideal para talleres y comercios locales.
+            </p>
+            <ul class="text-xs text-slate-600 space-y-2 mb-6">
+              <li class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-600 text-xs"></i> Registro estándar en el mapa
+              </li>
+              <li class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-600 text-xs"></i> Posición por cercanía métrica (GPS)
+              </li>
+              <li class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-600 text-xs"></i> Recepción de postulaciones directas
+              </li>
+              <li class="flex items-center gap-2 text-slate-400">
+                <i class="fa-solid fa-minus text-xs"></i> Sin prioridad visual en el listado
+              </li>
+            </ul>
+          </div>
+          <button onclick="selectPlan('free')" class="w-full py-2.5 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition">
+            Continuar con Plan Gratuito
+          </button>
+        </div>
+
+        <!-- Plan Destacado -->
+        <div class="border-2 border-amber-400 rounded-xl p-5 bg-gradient-to-b from-amber-50/70 to-white flex flex-col justify-between relative shadow-md">
+          <span class="absolute -top-3 right-4 bg-amber-500 text-white text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shadow-sm">
+            ★ Más Recomendado
+          </span>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full">Destacado</span>
+              <span class="text-xl font-black text-slate-900">$299 <span class="text-xs font-normal text-slate-500">MXN / mes</span></span>
+            </div>
+            <h4 class="font-bold text-slate-900 text-sm sm:text-base mb-2">Plan Destacado</h4>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+              Aparece en el primer lugar del radar y capta a los mejores aprendices de tu colonia antes que nadie.
+            </p>
+            <ul class="text-xs text-slate-700 space-y-2 mb-6">
+              <li class="flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-star text-amber-500 text-xs"></i> <strong>Aparición en el tope del radar</strong>
+              </li>
+              <li class="flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-star text-amber-500 text-xs"></i> Insignia dorada de Centro Destacado
+              </li>
+              <li class="flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-star text-amber-500 text-xs"></i> Recepción prioritaria de candidatos
+              </li>
+              <li class="flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-star text-amber-500 text-xs"></i> Validación acelerada de Ficha del Programa
+              </li>
+            </ul>
+          </div>
+          <button onclick="selectPlan('featured')" class="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-md shadow-amber-600/20">
+            Elegir Plan Destacado
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: SELECTOR DE ROL DE REGISTRO
+  ========================================================================== -->
+  <div id="roleSelectModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">Crear Cuenta en VinculaHoy</h3>
+          <p class="text-xs text-slate-500">Selecciona cómo deseas participar en la plataforma</p>
+        </div>
+        <button onclick="closeRoleSelectModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 my-4">
+        <!-- Rol 1: Aprendiz -->
+        <button onclick="chooseRole('aprendiz')" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/40 transition group flex items-start gap-3.5">
+          <div class="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-lg flex-shrink-0 group-hover:bg-brand-600 group-hover:text-white transition">
+            <i class="fa-solid fa-user-graduate"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="font-bold text-slate-900 text-sm mb-0.5 group-hover:text-brand-700">Socia / Aprendiz</h4>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              Busco capacitarme en un centro de trabajo cercano a mi domicilio y postularme de forma directa.
+            </p>
+          </div>
+          <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-brand-600 mt-3"></i>
+        </button>
+
+        <!-- Rol 2: Centro de Trabajo -->
+        <button onclick="chooseRole('center')" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-amber-500 hover:bg-amber-50/40 transition group flex items-start gap-3.5">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg flex-shrink-0 group-hover:bg-amber-600 group-hover:text-white transition">
+            <i class="fa-solid fa-building-shield"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="font-bold text-slate-900 text-sm mb-0.5 group-hover:text-amber-800">Centro de Trabajo</h4>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              Represento a una empresa, taller o comercio con vacantes abiertas para capacitar aprendices.
+            </p>
+          </div>
+          <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-amber-600 mt-3"></i>
+        </button>
+      </div>
+
+      <div class="text-center pt-3 border-t border-slate-100 text-xs text-slate-500">
+        ¿Ya tienes una cuenta? <a href="#" onclick="openLoginModal(); closeRoleSelectModal();" class="text-brand-600 font-bold hover:underline">Inicia Sesión aquí</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: REGISTRO DE APRENDIZ (CON FICHA DEL PROGRAMA)
+  ========================================================================== -->
+  <div id="registerAprendizModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-user-graduate text-base"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">Registro de Socia / Aprendiz</h3>
+            <p class="text-xs text-slate-500">Crea tu perfil y sube tu Ficha del Programa</p>
+          </div>
+        </div>
+        <button onclick="closeAprendizRegisterModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="registerAprendizForm" onsubmit="handleRegisterAprendiz(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre Completo *</label>
+          <input type="text" id="regAprFullName" required placeholder="Ej. Ana Laura Morales Gómez" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico *</label>
+            <input type="email" id="regAprEmail" required placeholder="tu.correo@ejemplo.com" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña *</label>
+            <input type="password" id="regAprPassword" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Teléfono (WhatsApp)</label>
+            <input type="tel" id="regAprPhone" placeholder="+52 55 1234 5678" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Área Formativa de Interés *</label>
+            <select id="regAprInterest" required class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              <option value="Tecnología de la Información">Tecnología de la Información</option>
+              <option value="Administración y Finanzas">Administración y Finanzas</option>
+              <option value="Diseño y Publicidad">Diseño y Publicidad</option>
+              <option value="Servicios y Alimentos">Servicios y Alimentos</option>
+              <option value="Oficios y Mantenimiento">Oficios y Mantenimiento</option>
+              <option value="Salud y Cuidado">Salud y Cuidado</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Habilidades formativas / Experiencia previa</label>
+          <textarea id="regAprSkills" rows="2" placeholder="Ej. Manejo básico de PC, atención al cliente, redacción..." class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Radio Máximo de Traslado (km)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="regAprCommuteSlider" min="1" max="25" value="5" step="1" oninput="document.getElementById('regAprCommuteLabel').textContent = this.value + ' km'" class="flex-1 accent-brand-600" />
+            <span id="regAprCommuteLabel" class="text-xs font-bold text-slate-800 w-12 text-right">5 km</span>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <label class="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-pdf text-rose-600"></i> Ficha del Programa (PDF o Imagen)
+          </label>
+          <p class="text-[11px] text-slate-500 mb-2">
+            Adjunta tu ficha o folio de registro del programa para validar tu vinculación.
+          </p>
+          <input type="file" id="regAprFile" accept=".pdf,image/png,image/jpeg,image/webp" class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-700 cursor-pointer" />
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeAprendizRegisterModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+          <button type="submit" id="btnSubmitAprendiz" class="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition shadow-md shadow-brand-600/20">
+            Crear Perfil de Aprendiz
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: REGISTRO DE CENTRO DE TRABAJO (CON FICHA DEL PROGRAMA)
+  ========================================================================== -->
+  <div id="registerCenterModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-building-circle-check text-base"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">Registrar Centro de Trabajo</h3>
+            <p class="text-xs text-slate-500">Vinculación y Ficha del Programa</p>
+          </div>
+        </div>
+        <button onclick="closeCenterRegisterModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="registerCenterForm" onsubmit="handleRegisterCenter(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre Comercial de la Empresa o Taller *</label>
+          <input type="text" id="regCompanyName" required placeholder="Ej. Taller Creativo Gráfico & Digital" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Giro Formativo *</label>
+            <select id="regTrade" required class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              <option value="Tecnología de la Información">Tecnología de la Información</option>
+              <option value="Diseño y Publicidad">Diseño y Publicidad</option>
+              <option value="Administración y Finanzas">Administración y Finanzas</option>
+              <option value="Servicios y Alimentos">Servicios y Alimentos</option>
+              <option value="Oficios y Mantenimiento">Oficios y Mantenimiento</option>
+              <option value="Salud y Cuidado">Salud y Cuidado</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Vacantes Disponibles *</label>
+            <input type="number" id="regVacancies" min="1" max="50" value="2" required class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Dirección Física del Centro *</label>
+          <input type="text" id="regAddress" required placeholder="Calle, Número, Colonia, Municipio / Alcaldía" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Horario Formativo</label>
+            <input type="text" id="regSchedule" placeholder="Ej. Lunes a Viernes 9:00 - 15:00" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Persona / Tutor de Contacto</label>
+            <input type="text" id="regContactPerson" placeholder="Ej. Lic. Roberto Silva" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">RFC o ID Fiscal (Opcional)</label>
+            <input type="text" id="regRfc" placeholder="RFC de la empresa" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none uppercase" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Teléfono</label>
+            <input type="tel" id="regContactPhone" placeholder="+52 55 1234 5678" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico *</label>
+            <input type="email" id="regEmail" required placeholder="contacto@empresa.com" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña *</label>
+            <input type="password" id="regPassword" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <label class="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-arrow-up text-brand-600"></i> Ficha del Programa (PDF o Imagen)
+          </label>
+          <p class="text-[11px] text-slate-500 mb-2">
+            Sube el comprobante de registro o ficha del programa de Jóvenes Construyendo el Futuro para validación.
+          </p>
+          <input type="file" id="regProgramFile" accept=".pdf,image/png,image/jpeg,image/webp" class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-700 cursor-pointer" />
+        </div>
+
+        <!-- Opción Destacar Vacante -->
+        <div class="p-3 bg-amber-50/80 border border-amber-200 rounded-xl flex items-start gap-2.5">
+          <input type="checkbox" id="regIsPremium" checked class="mt-1 rounded text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer" />
+          <label for="regIsPremium" class="text-xs text-slate-700 leading-snug cursor-pointer">
+            <strong class="text-amber-900 block font-bold mb-0.5">Destacar mi vacante en la zona</strong>
+            Muestra mi centro en la parte superior del radar para recibir mensajes de aprendices cercanos antes que nadie.
+          </label>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeCenterRegisterModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+          <button type="submit" id="btnSubmitCenter" class="px-5 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition shadow-md shadow-amber-600/20">
+            Registrar y Activar Vacante
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: INICIO DE SESIÓN
+  ========================================================================== -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">Iniciar Sesión</h3>
+          <p class="text-xs text-slate-500">Accede a tu cuenta de VinculaHoy</p>
+        </div>
+        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico</label>
+          <input type="email" id="loginEmail" required placeholder="correo@ejemplo.com" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
+          <input type="password" id="loginPassword" required placeholder="Tu contraseña" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" id="btnSubmitLogin" class="w-full py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition shadow-md shadow-brand-600/20">
+            Ingresar a la Plataforma
+          </button>
+        </div>
+
+        <div class="text-center pt-2 text-xs text-slate-500">
+          ¿Aún no tienes cuenta? <a href="#" onclick="closeLoginModal(); openRoleSelectModal();" class="text-brand-600 font-bold hover:underline">Regístrate aquí</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript Principal -->
+  <script src="app.js"></script>
+</body>
+</html>
