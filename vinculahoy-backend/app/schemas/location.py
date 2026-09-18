@@ -20,9 +20,9 @@ class WorkCenterResponse(BaseModel):
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     vacancies: int
-    is_verified: bool
-    is_premium: bool
-    is_featured: bool = Field(..., description="Bandera para destacar en carrusel de frontend (True si es premium)")
+    is_verified: bool = False
+    is_premium: bool = False
+    is_featured: bool = Field(default=False, description="Bandera para destacar en carrusel de frontend (True si es premium)")
     latitude: float
     longitude: float
     distance_km: Optional[float] = Field(None, description="Distancia calculada en kilómetros respecto al punto de búsqueda")

@@ -61,6 +61,10 @@ class WorkCenter(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
 
+    @property
+    def is_featured(self) -> bool:
+        return bool(self.is_premium)
+
     # Relaciones
     user = relationship("User", back_populates="work_center")
     inquiries = relationship("ChatMessage", back_populates="center", cascade="all, delete-orphan")
