@@ -4,10 +4,10 @@
  */
 
 // Configuración de endpoint del Backend
-// Si está desplegado en Cloudflare Pages, apunta a la URL de producción o a localhost en desarrollo
+// En desarrollo usa localhost; en producción apunta a la API desplegada en Render
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://127.0.0.1:8000/api/v1'
-  : '/api/v1';
+  : 'https://vinculahoy-api.onrender.com/api/v1';
 
 // Estado global de la aplicación
 const state = {
