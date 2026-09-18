@@ -84,6 +84,34 @@
           <span class="md:hidden">Mi GPS</span>
         </button>
 
+        <!-- Bloque de Sesión / Autenticación -->
+        <div id="navAuthSection" class="flex items-center gap-1.5 sm:gap-2 border-l border-slate-200 pl-2 sm:pl-3">
+          <!-- Estado Invitado: Iniciar Sesión y Registrarse -->
+          <div id="guestAuthNav" class="flex items-center gap-1.5 sm:gap-2">
+            <button onclick="openLoginModal()" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 hover:text-brand-700 hover:bg-slate-100 rounded-lg transition">
+              Iniciar Sesión
+            </button>
+            <button onclick="openRoleSelectModal()" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-bold text-white bg-slate-900 hover:bg-brand-600 rounded-lg transition shadow-xs">
+              Registrarse
+            </button>
+          </div>
+
+          <!-- Estado Usuario Autenticado -->
+          <div id="userAuthNav" class="hidden items-center gap-2">
+            <div class="flex flex-col text-right">
+              <span id="navUserEmail" class="text-xs font-bold text-slate-900 truncate max-w-[130px] sm:max-w-[180px]"></span>
+              <div class="flex items-center justify-end gap-1.5 mt-0.5">
+                <span id="navUserRoleBadge" class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 uppercase"></span>
+                <span id="navUserVerifyBadge" class="text-[10px] font-bold px-1.5 py-0.2 rounded"></span>
+              </div>
+            </div>
+            <button onclick="handleLogout()" class="px-2 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg transition ml-1" title="Cerrar Sesión">
+              <i class="fa-solid fa-right-from-bracket"></i>
+              <span class="hidden md:inline ml-1">Salir</span>
+            </button>
+          </div>
+        </div>
+
         <button id="btnModalInfo" class="text-slate-600 hover:text-slate-900 hover:bg-slate-100 p-2 rounded-lg transition" title="Información y Legal">
           <i class="fa-solid fa-circle-info text-lg"></i>
         </button>
@@ -215,7 +243,7 @@
             <p class="text-slate-800 font-semibold leading-relaxed mb-2.5">
               ¿Quieres que tu centro sea el primero que vean los aprendices de tu zona? Destaca tu vacante para recibir mensajes de los mejores candidatos cercanos antes que nadie.
             </p>
-            <button onclick="openCenterRegisterModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition shadow-xs">
+            <button onclick="openSubscriptionPlansModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs transition shadow-xs">
               <i class="fa-solid fa-bolt text-[11px]"></i> Destacar mi Centro
             </button>
           </div>
@@ -303,17 +331,236 @@
           </p>
         </div>
 
-        <h4 class="font-bold text-slate-800 text-xs mt-3">Tecnología de Costo $0 USD:</h4>
-        <ul class="list-disc pl-4 space-y-1 text-slate-600">
-          <li>Base de Datos Geoespacial: PostgreSQL 15 + PostGIS (Supabase Free Tier).</li>
-          <li>Cálculo de Proximidad: ST_DWithin y ST_Distance en esferoide WGS 84.</li>
-          <li>Arquitectura de Red: Despliegue estático sobre Cloudflare Pages y Workers.</li>
-        </ul>
       </div>
 
       <div class="mt-6 text-right">
         <button onclick="closeInfoModal()" class="px-5 py-2 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-lg">Entendido</button>
       </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: PLANES DE SUSCRIPCIÓN PARA CENTROS DE TRABAJO
+  ========================================================================== -->
+  <div id="subscriptionPlansModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2">
+            <i class="fa-solid fa-gem text-amber-500"></i> Planes para Centros de Trabajo
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">Elige cómo deseas publicar tus vacantes de capacitación en tu zona</p>
+        </div>
+        <button onclick="closeSubscriptionPlansModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+        <!-- Plan Base Gratuito -->
+        <div class="border border-slate-200 rounded-xl p-5 bg-white flex flex-col justify-between hover:border-slate-300 transition shadow-xs">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">Básico</span>
+              <span class="text-xl font-black text-slate-900">$0 <span class="text-xs font-normal text-slate-500">MXN</span></span>
+            </div>
+            <h4 class="font-bold text-slate-900 text-sm sm:text-base mb-2">Plan Base Gratuito</h4>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+              Publica tu vacante en el radar comunitario según distancia métrica. Ideal para talleres y comercios locales.
+            </p>
+            <ul class="text-xs text-slate-600 space-y-2 mb-6">
+              <li class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-600 text-xs"></i> Registro estándar en el mapa
+              </li>
+              <li class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-600 text-xs"></i> Posición por cercanía métrica (GPS)
+              </li>
+              <li class="flex items-center gap-2">
+                <i class="fa-solid fa-check text-emerald-600 text-xs"></i> Recepción de postulaciones directas
+              </li>
+              <li class="flex items-center gap-2 text-slate-400">
+                <i class="fa-solid fa-minus text-xs"></i> Sin prioridad visual en el listado
+              </li>
+            </ul>
+          </div>
+          <button onclick="selectPlan('free')" class="w-full py-2.5 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs transition">
+            Continuar con Plan Gratuito
+          </button>
+        </div>
+
+        <!-- Plan Destacado -->
+        <div class="border-2 border-amber-400 rounded-xl p-5 bg-gradient-to-b from-amber-50/70 to-white flex flex-col justify-between relative shadow-md">
+          <span class="absolute -top-3 right-4 bg-amber-500 text-white text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shadow-sm">
+            ★ Más Recomendado
+          </span>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full">Destacado</span>
+              <span class="text-xl font-black text-slate-900">$299 <span class="text-xs font-normal text-slate-500">MXN / mes</span></span>
+            </div>
+            <h4 class="font-bold text-slate-900 text-sm sm:text-base mb-2">Plan Destacado</h4>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+              Aparece en el primer lugar del radar y capta a los mejores aprendices de tu colonia antes que nadie.
+            </p>
+            <ul class="text-xs text-slate-700 space-y-2 mb-6">
+              <li class="flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-star text-amber-500 text-xs"></i> <strong>Aparición en el tope del radar</strong>
+              </li>
+              <li class="flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-star text-amber-500 text-xs"></i> Insignia dorada de Centro Destacado
+              </li>
+              <li class="flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-star text-amber-500 text-xs"></i> Recepción prioritaria de candidatos
+              </li>
+              <li class="flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-star text-amber-500 text-xs"></i> Validación acelerada de Ficha del Programa
+              </li>
+            </ul>
+          </div>
+          <button onclick="selectPlan('featured')" class="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-md shadow-amber-600/20">
+            Elegir Plan Destacado
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: SELECTOR DE ROL DE REGISTRO
+  ========================================================================== -->
+  <div id="roleSelectModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">Crear Cuenta en VinculaHoy</h3>
+          <p class="text-xs text-slate-500">Selecciona cómo deseas participar en la plataforma</p>
+        </div>
+        <button onclick="closeRoleSelectModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 my-4">
+        <!-- Rol 1: Aprendiz -->
+        <button onclick="chooseRole('aprendiz')" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-brand-500 hover:bg-brand-50/40 transition group flex items-start gap-3.5">
+          <div class="w-10 h-10 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center text-lg flex-shrink-0 group-hover:bg-brand-600 group-hover:text-white transition">
+            <i class="fa-solid fa-user-graduate"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="font-bold text-slate-900 text-sm mb-0.5 group-hover:text-brand-700">Socia / Aprendiz</h4>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              Busco capacitarme en un centro de trabajo cercano a mi domicilio y postularme de forma directa.
+            </p>
+          </div>
+          <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-brand-600 mt-3"></i>
+        </button>
+
+        <!-- Rol 2: Centro de Trabajo -->
+        <button onclick="chooseRole('center')" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-amber-500 hover:bg-amber-50/40 transition group flex items-start gap-3.5">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg flex-shrink-0 group-hover:bg-amber-600 group-hover:text-white transition">
+            <i class="fa-solid fa-building-shield"></i>
+          </div>
+          <div class="flex-1">
+            <h4 class="font-bold text-slate-900 text-sm mb-0.5 group-hover:text-amber-800">Centro de Trabajo</h4>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              Represento a una empresa, taller o comercio con vacantes abiertas para capacitar aprendices.
+            </p>
+          </div>
+          <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-amber-600 mt-3"></i>
+        </button>
+      </div>
+
+      <div class="text-center pt-3 border-t border-slate-100 text-xs text-slate-500">
+        ¿Ya tienes una cuenta? <a href="#" onclick="openLoginModal(); closeRoleSelectModal();" class="text-brand-600 font-bold hover:underline">Inicia Sesión aquí</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: REGISTRO DE APRENDIZ (CON FICHA DEL PROGRAMA)
+  ========================================================================== -->
+  <div id="registerAprendizModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-user-graduate text-base"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">Registro de Socia / Aprendiz</h3>
+            <p class="text-xs text-slate-500">Crea tu perfil y sube tu Ficha del Programa</p>
+          </div>
+        </div>
+        <button onclick="closeAprendizRegisterModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="registerAprendizForm" onsubmit="handleRegisterAprendiz(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre Completo *</label>
+          <input type="text" id="regAprFullName" required placeholder="Ej. Ana Laura Morales Gómez" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico *</label>
+            <input type="email" id="regAprEmail" required placeholder="tu.correo@ejemplo.com" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña *</label>
+            <input type="password" id="regAprPassword" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Teléfono (WhatsApp)</label>
+            <input type="tel" id="regAprPhone" placeholder="+52 55 1234 5678" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Área Formativa de Interés *</label>
+            <select id="regAprInterest" required class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              <option value="Tecnología de la Información">Tecnología de la Información</option>
+              <option value="Administración y Finanzas">Administración y Finanzas</option>
+              <option value="Diseño y Publicidad">Diseño y Publicidad</option>
+              <option value="Servicios y Alimentos">Servicios y Alimentos</option>
+              <option value="Oficios y Mantenimiento">Oficios y Mantenimiento</option>
+              <option value="Salud y Cuidado">Salud y Cuidado</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Habilidades formativas / Experiencia previa</label>
+          <textarea id="regAprSkills" rows="2" placeholder="Ej. Manejo básico de PC, atención al cliente, redacción..." class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Radio Máximo de Traslado (km)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="regAprCommuteSlider" min="1" max="25" value="5" step="1" oninput="document.getElementById('regAprCommuteLabel').textContent = this.value + ' km'" class="flex-1 accent-brand-600" />
+            <span id="regAprCommuteLabel" class="text-xs font-bold text-slate-800 w-12 text-right">5 km</span>
+          </div>
+        </div>
+
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <label class="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-pdf text-rose-600"></i> Ficha del Programa (PDF o Imagen)
+          </label>
+          <p class="text-[11px] text-slate-500 mb-2">
+            Adjunta tu ficha o folio de registro del programa para validar tu vinculación.
+          </p>
+          <input type="file" id="regAprFile" accept=".pdf,image/png,image/jpeg,image/webp" class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-700 cursor-pointer" />
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeAprendizRegisterModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancelar</button>
+          <button type="submit" id="btnSubmitAprendiz" class="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition shadow-md shadow-brand-600/20">
+            Crear Perfil de Aprendiz
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -339,8 +586,8 @@
 
       <form id="registerCenterForm" onsubmit="handleRegisterCenter(event)" class="space-y-3.5">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre de la Empresa o Taller *</label>
-          <input type="text" id="regCompanyName" required placeholder="Ej. Taller Mecánico Especializado" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre Comercial de la Empresa o Taller *</label>
+          <input type="text" id="regCompanyName" required placeholder="Ej. Taller Creativo Gráfico & Digital" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -361,6 +608,33 @@
           </div>
         </div>
 
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Dirección Física del Centro *</label>
+          <input type="text" id="regAddress" required placeholder="Calle, Número, Colonia, Municipio / Alcaldía" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Horario Formativo</label>
+            <input type="text" id="regSchedule" placeholder="Ej. Lunes a Viernes 9:00 - 15:00" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Persona / Tutor de Contacto</label>
+            <input type="text" id="regContactPerson" placeholder="Ej. Lic. Roberto Silva" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">RFC o ID Fiscal (Opcional)</label>
+            <input type="text" id="regRfc" placeholder="RFC de la empresa" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none uppercase" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Teléfono</label>
+            <input type="tel" id="regContactPhone" placeholder="+52 55 1234 5678" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico *</label>
@@ -370,11 +644,6 @@
             <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña *</label>
             <input type="password" id="regPassword" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
           </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Dirección del Centro *</label>
-          <input type="text" id="regAddress" required placeholder="Calle, Número, Colonia, Municipio / Alcaldía" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
         </div>
 
         <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
@@ -401,6 +670,45 @@
           <button type="submit" id="btnSubmitCenter" class="px-5 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition shadow-md shadow-amber-600/20">
             Registrar y Activar Vacante
           </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL: INICIO DE SESIÓN
+  ========================================================================== -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 transform transition-all animate-fadeIn">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">Iniciar Sesión</h3>
+          <p class="text-xs text-slate-500">Accede a tu cuenta de VinculaHoy</p>
+        </div>
+        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico</label>
+          <input type="email" id="loginEmail" required placeholder="correo@ejemplo.com" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
+          <input type="password" id="loginPassword" required placeholder="Tu contraseña" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" />
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" id="btnSubmitLogin" class="w-full py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition shadow-md shadow-brand-600/20">
+            Ingresar a la Plataforma
+          </button>
+        </div>
+
+        <div class="text-center pt-2 text-xs text-slate-500">
+          ¿Aún no tienes cuenta? <a href="#" onclick="closeLoginModal(); openRoleSelectModal();" class="text-brand-600 font-bold hover:underline">Regístrate aquí</a>
         </div>
       </form>
     </div>

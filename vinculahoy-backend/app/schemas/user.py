@@ -43,6 +43,9 @@ class WorkCenterRegister(BaseModel):
     trade: str = Field(..., min_length=2, max_length=150, description="Giro o actividad del centro")
     description: Optional[str] = None
     address: str = Field(..., min_length=5, max_length=300)
+    schedule: Optional[str] = Field(None, description="Horario formativo (ej. Lunes a Viernes 9:00 - 15:00)")
+    contact_person: Optional[str] = Field(None, description="Tutor o persona de contacto")
+    rfc: Optional[str] = Field(None, description="RFC o identificación fiscal")
     contact_email: Optional[EmailStr] = None
     contact_phone: Optional[str] = None
     vacancies: int = Field(default=1, ge=1, le=100, description="Número de vacantes disponibles para aprendices")
@@ -55,6 +58,8 @@ class WorkCenterRegister(BaseModel):
 # ------------------------------------------------------------------------------
 # RESPUESTAS DE USUARIOS
 # ------------------------------------------------------------------------------
+from app.schemas.location import WorkCenterResponse
+
 class UserResponse(BaseModel):
     id: str
     email: EmailStr
@@ -64,5 +69,6 @@ class UserResponse(BaseModel):
     verification_status: VerificationStatus = VerificationStatus.PENDING
     created_at: datetime
     aprendiz_profile: Optional[AprendizProfileResponse] = None
+    work_center: Optional[WorkCenterResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

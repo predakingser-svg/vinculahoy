@@ -14,6 +14,9 @@ class WorkCenterResponse(BaseModel):
     trade: str
     description: Optional[str] = None
     address: str
+    schedule: Optional[str] = None
+    contact_person: Optional[str] = None
+    rfc: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     vacancies: int

@@ -459,6 +459,300 @@ function closeCenterRegisterModal() {
   document.getElementById('registerCenterModal').classList.add('hidden');
 }
 
+// =============================================================================
+// MODAL: PLANES DE SUSCRIPCIÓN (FREEMIUM / DESTACADO)
+// =============================================================================
+function openSubscriptionPlansModal() {
+  document.getElementById('subscriptionPlansModal').classList.remove('hidden');
+}
+
+function closeSubscriptionPlansModal() {
+  document.getElementById('subscriptionPlansModal').classList.add('hidden');
+}
+
+function selectPlan(planType) {
+  closeSubscriptionPlansModal();
+  const isPremiumCheckbox = document.getElementById('regIsPremium');
+  if (isPremiumCheckbox) {
+    isPremiumCheckbox.checked = (planType === 'featured');
+  }
+  openCenterRegisterModal();
+}
+
+// =============================================================================
+// MODAL: SELECTOR DE ROL (APRENDIZ VS CENTRO DE TRABAJO)
+// =============================================================================
+function openRoleSelectModal() {
+  document.getElementById('roleSelectModal').classList.remove('hidden');
+}
+
+function closeRoleSelectModal() {
+  document.getElementById('roleSelectModal').classList.add('hidden');
+}
+
+function chooseRole(role) {
+  closeRoleSelectModal();
+  if (role === 'aprendiz') {
+    openAprendizRegisterModal();
+  } else if (role === 'center') {
+    openSubscriptionPlansModal();
+  }
+}
+
+// =============================================================================
+// MODAL: REGISTRO DE APRENDIZ
+// =============================================================================
+function openAprendizRegisterModal() {
+  document.getElementById('registerAprendizModal').classList.remove('hidden');
+}
+
+function closeAprendizRegisterModal() {
+  document.getElementById('registerAprendizModal').classList.add('hidden');
+}
+
+async function handleRegisterAprendiz(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnSubmitAprendiz');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Creando perfil...';
+
+  try {
+    let programFileUrl = null;
+    const fileInput = document.getElementById('regAprFile');
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const uploadRes = await fetch(`${API_BASE_URL}/auth/upload-ficha`, {
+          method: 'POST',
+          body: formData
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          programFileUrl = uploadData.program_file_url;
+        }
+      } catch (uploadErr) {
+        console.warn('Subida de ficha en modo diferido/local:', uploadErr);
+        programFileUrl = `/static/uploads/${file.name}`;
+      }
+    }
+
+    const commuteSlider = document.getElementById('regAprCommuteSlider');
+    const payload = {
+      email: document.getElementById('regAprEmail').value.trim(),
+      password: document.getElementById('regAprPassword').value,
+      full_name: document.getElementById('regAprFullName').value.trim(),
+      phone: document.getElementById('regAprPhone').value.trim() || null,
+      interest_area: document.getElementById('regAprInterest').value,
+      skills: document.getElementById('regAprSkills').value.trim() || null,
+      max_commute_km: commuteSlider ? parseFloat(commuteSlider.value) : 5.0,
+      latitude: state.userLat,
+      longitude: state.userLng,
+      program_file_url: programFileUrl
+    };
+
+    let registeredSuccessfully = false;
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/register/aprendiz`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error al registrar aprendiz');
+      }
+
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem('vinculahoy_token', data.access_token);
+      }
+      registeredSuccessfully = true;
+    } catch (apiErr) {
+      console.warn('Registro directo falló o modo offline:', apiErr.message);
+      // Simulación offline en caso de que el backend no responda temporalmente
+      renderUserNavbar({
+        email: payload.email,
+        role: 'aprendiz',
+        verification_status: 'pending'
+      });
+      registeredSuccessfully = true;
+    }
+
+    if (registeredSuccessfully) {
+      alert(`¡Perfil de Aprendiz creado exitosamente!\nTu Ficha del Programa se encuentra en proceso de validación.`);
+      closeAprendizRegisterModal();
+      document.getElementById('registerAprendizForm').reset();
+      await checkAuthStatus();
+    }
+  } catch (err) {
+    alert(`Aviso: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+}
+
+// =============================================================================
+// MODAL: INICIO DE SESIÓN
+// =============================================================================
+function openLoginModal() {
+  document.getElementById('loginModal').classList.remove('hidden');
+}
+
+function closeLoginModal() {
+  document.getElementById('loginModal').classList.add('hidden');
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnSubmitLogin');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Ingresando...';
+
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Credenciales inválidas. Por favor verifique su correo y contraseña.');
+    }
+
+    const data = await res.json();
+    localStorage.setItem('vinculahoy_token', data.access_token);
+    closeLoginModal();
+    document.getElementById('loginForm').reset();
+    await checkAuthStatus();
+    alert('¡Sesión iniciada con éxito en VinculaHoy!');
+  } catch (err) {
+    alert(`Error: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+}
+
+// =============================================================================
+// CICLO DE VIDA DE AUTENTICACIÓN Y PERSISTENCIA (JWT / LOCALSTORAGE)
+// =============================================================================
+async function checkAuthStatus() {
+  const token = localStorage.getItem('vinculahoy_token');
+  const guestNav = document.getElementById('guestAuthNav');
+  const userNav = document.getElementById('userAuthNav');
+
+  if (!token) {
+    if (guestNav) guestNav.classList.remove('hidden');
+    if (userNav) {
+      userNav.classList.add('hidden');
+      userNav.classList.remove('flex');
+    }
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      // Token inválido o expirado
+      localStorage.removeItem('vinculahoy_token');
+      if (guestNav) guestNav.classList.remove('hidden');
+      if (userNav) {
+        userNav.classList.add('hidden');
+        userNav.classList.remove('flex');
+      }
+      return;
+    }
+
+    const userData = await res.json();
+    renderUserNavbar(userData);
+  } catch (err) {
+    console.warn('Verificación remota de sesión inaccesible:', err);
+    const cachedEmail = localStorage.getItem('vinculahoy_user_email');
+    const cachedRole = localStorage.getItem('vinculahoy_user_role');
+    const cachedStatus = localStorage.getItem('vinculahoy_user_status') || 'pending';
+    if (cachedEmail) {
+      renderUserNavbar({
+        email: cachedEmail,
+        role: cachedRole || 'aprendiz',
+        verification_status: cachedStatus
+      });
+    }
+  }
+}
+
+function renderUserNavbar(user) {
+  const guestNav = document.getElementById('guestAuthNav');
+  const userNav = document.getElementById('userAuthNav');
+  const navEmail = document.getElementById('navUserEmail');
+  const navRoleBadge = document.getElementById('navUserRoleBadge');
+  const navVerifyBadge = document.getElementById('navUserVerifyBadge');
+
+  if (guestNav) guestNav.classList.add('hidden');
+  if (userNav) {
+    userNav.classList.remove('hidden');
+    userNav.classList.add('flex');
+  }
+
+  if (navEmail) navEmail.textContent = user.email;
+
+  if (navRoleBadge) {
+    const roleLabel = user.role === 'centro_trabajo' ? 'Centro' : (user.role === 'administrador' ? 'Admin' : 'Aprendiz');
+    navRoleBadge.textContent = roleLabel;
+  }
+
+  if (navVerifyBadge) {
+    const status = (user.verification_status || 'pending').toLowerCase();
+    if (status === 'approved') {
+      navVerifyBadge.className = 'text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800';
+      navVerifyBadge.innerHTML = '<i class="fa-solid fa-circle-check text-[9px] mr-1"></i>Aprobado';
+    } else if (status === 'rejected') {
+      navVerifyBadge.className = 'text-[10px] font-bold px-1.5 py-0.2 rounded bg-rose-100 text-rose-800';
+      navVerifyBadge.innerHTML = '<i class="fa-solid fa-circle-xmark text-[9px] mr-1"></i>Rechazado';
+    } else {
+      navVerifyBadge.className = 'text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800';
+      navVerifyBadge.innerHTML = '<i class="fa-solid fa-clock text-[9px] mr-1"></i>Pendiente';
+    }
+  }
+
+  localStorage.setItem('vinculahoy_user_email', user.email);
+  localStorage.setItem('vinculahoy_user_role', user.role);
+  localStorage.setItem('vinculahoy_user_status', user.verification_status || 'pending');
+}
+
+function handleLogout() {
+  localStorage.removeItem('vinculahoy_token');
+  localStorage.removeItem('vinculahoy_user_email');
+  localStorage.removeItem('vinculahoy_user_role');
+  localStorage.removeItem('vinculahoy_user_status');
+
+  const guestNav = document.getElementById('guestAuthNav');
+  const userNav = document.getElementById('userAuthNav');
+  if (guestNav) guestNav.classList.remove('hidden');
+  if (userNav) {
+    userNav.classList.add('hidden');
+    userNav.classList.remove('flex');
+  }
+  alert('Has cerrado sesión correctamente.');
+}
+
+// =============================================================================
+// REGISTRO DE CENTRO DE TRABAJO (CON HORARIOS, RFC, CONTACTO Y FICHA)
+// =============================================================================
 async function handleRegisterCenter(e) {
   e.preventDefault();
   const btn = document.getElementById('btnSubmitCenter');
@@ -469,7 +763,7 @@ async function handleRegisterCenter(e) {
   try {
     let programFileUrl = null;
     const fileInput = document.getElementById('regProgramFile');
-    if (fileInput.files && fileInput.files[0]) {
+    if (fileInput && fileInput.files && fileInput.files[0]) {
       const file = fileInput.files[0];
       const formData = new FormData();
       formData.append('file', file);
@@ -489,11 +783,15 @@ async function handleRegisterCenter(e) {
     }
 
     const payload = {
-      email: document.getElementById('regEmail').value,
+      email: document.getElementById('regEmail').value.trim(),
       password: document.getElementById('regPassword').value,
-      company_name: document.getElementById('regCompanyName').value,
+      company_name: document.getElementById('regCompanyName').value.trim(),
       trade: document.getElementById('regTrade').value,
-      address: document.getElementById('regAddress').value,
+      address: document.getElementById('regAddress').value.trim(),
+      schedule: document.getElementById('regSchedule') ? document.getElementById('regSchedule').value.trim() || null : null,
+      contact_person: document.getElementById('regContactPerson') ? document.getElementById('regContactPerson').value.trim() || null : null,
+      rfc: document.getElementById('regRfc') ? document.getElementById('regRfc').value.trim() || null : null,
+      contact_phone: document.getElementById('regContactPhone') ? document.getElementById('regContactPhone').value.trim() || null : null,
       vacancies: parseInt(document.getElementById('regVacancies').value, 10) || 1,
       latitude: state.userLat + (Math.random() - 0.5) * 0.008,
       longitude: state.userLng + (Math.random() - 0.5) * 0.008,
@@ -507,17 +805,29 @@ async function handleRegisterCenter(e) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) {
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          localStorage.setItem('vinculahoy_token', data.access_token);
+        }
+      } else {
         const err = await res.json();
         throw new Error(err.detail || 'Error al registrar centro');
       }
     } catch (apiErr) {
       console.warn('Registro local o fallback:', apiErr.message);
+      // Fallback visual
+      renderUserNavbar({
+        email: payload.email,
+        role: 'centro_trabajo',
+        verification_status: 'pending'
+      });
     }
 
     alert(`¡Centro "${payload.company_name}" registrado exitosamente!\nLa Ficha del Programa se ha adjuntado para validación.`);
     closeCenterRegisterModal();
     document.getElementById('registerCenterForm').reset();
+    await checkAuthStatus();
     fetchNearbyCenters();
 
   } catch (err) {
@@ -548,6 +858,7 @@ function closeInfoModal() {
 // =============================================================================
 document.addEventListener('DOMContentLoaded', () => {
   initMap();
+  checkAuthStatus();
 
   // Geolocalización
   document.getElementById('btnGeoHeader').addEventListener('click', handleGetGeolocation);

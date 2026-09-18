@@ -31,6 +31,9 @@ class WorkCenter(Base):
     trade = Column(String(150), nullable=False, index=True)  # Giro del centro
     description = Column(Text, nullable=True)
     address = Column(String(300), nullable=False)
+    schedule = Column(String(100), nullable=True)  # Horario formativo
+    contact_person = Column(String(150), nullable=True)  # Persona / tutor de contacto
+    rfc = Column(String(20), nullable=True)  # RFC o identificación fiscal
     contact_email = Column(String(255), nullable=True)
     contact_phone = Column(String(50), nullable=True)
     
