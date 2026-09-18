@@ -151,6 +151,13 @@
           <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
         </div>
 
+        <!-- Buscador manual de Ciudad / CP -->
+        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs sm:text-sm">
+          <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+          <input type="text" id="citySearchInput" placeholder="Buscar ciudad o CP..." class="bg-transparent border-0 text-xs text-slate-800 placeholder-slate-400 focus:outline-none w-28 sm:w-40" />
+          <button id="btnCitySearch" class="text-brand-600 hover:text-brand-700 font-bold px-1" title="Buscar ubicación"><i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+
         <!-- Botones de Acceso Rápido a Coordenadas (Demo / Fallback) -->
         <div class="hidden lg:flex items-center gap-1 text-xs text-slate-500">
           <span class="text-[11px] font-semibold text-slate-400 uppercase mr-1">Demo:</span>
@@ -718,6 +725,9 @@
       </form>
     </div>
   </div>
+
+  <!-- Toast Notifications Flotantes -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 max-w-sm pointer-events-none"></div>
 
   <!-- JavaScript Principal -->
   <script src="app.js"></script>
