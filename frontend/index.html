@@ -98,6 +98,11 @@
 
           <!-- Estado Usuario Autenticado -->
           <div id="userAuthNav" class="hidden items-center gap-2">
+            <!-- Botón Planes de Suscripción (Solo visible para rol CENTRO_TRABAJO) -->
+            <button id="navPlansBtn" onclick="openSubscriptionPlansModal()" class="hidden items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg transition" title="Planes de Suscripción">
+              <i class="fa-solid fa-gem text-amber-600"></i>
+              <span class="hidden sm:inline">Planes</span>
+            </button>
             <div class="flex flex-col text-right">
               <span id="navUserEmail" class="text-xs font-bold text-slate-900 truncate max-w-[130px] sm:max-w-[180px]"></span>
               <div class="flex items-center justify-end gap-1.5 mt-0.5">
@@ -233,8 +238,8 @@
         </div>
       </div>
 
-      <!-- BANNER CTA: DESTACA TU CENTRO DE TRABAJO -->
-      <div class="p-4 bg-gradient-to-br from-amber-50 to-orange-50/70 border-t border-amber-200 text-xs shadow-inner">
+      <!-- BANNER CTA: DESTACA TU CENTRO DE TRABAJO (solo visible para CENTRO_TRABAJO) -->
+      <div id="ctaDestacaBanner" class="hidden p-4 bg-gradient-to-br from-amber-50 to-orange-50/70 border-t border-amber-200 text-xs shadow-inner">
         <div class="flex items-start gap-3">
           <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
             <i class="fa-solid fa-star text-xs"></i>
