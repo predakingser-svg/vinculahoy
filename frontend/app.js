@@ -24,19 +24,79 @@ const state = {
 };
 
 // =============================================================================
-// INICIALIZACIÓN DEL MAPA LEAFLET
+// SISTEMA DE NOTIFICACIONES TOAST FLOTANTES
+// =============================================================================
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  const bgClass = type === 'error'
+    ? 'bg-rose-900/95 border-rose-700 text-white'
+    : (type === 'warning'
+      ? 'bg-amber-900/95 border-amber-700 text-amber-50'
+      : 'bg-slate-900/95 border-slate-700 text-white');
+  const iconClass = type === 'error'
+    ? 'fa-circle-xmark text-rose-400'
+    : (type === 'warning'
+      ? 'fa-triangle-exclamation text-amber-400'
+      : 'fa-circle-info text-brand-400');
+
+  toast.className = `flex items-center gap-2.5 px-4 py-2.5 rounded-xl border shadow-xl text-xs backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto ${bgClass}`;
+  toast.innerHTML = `
+    <i class="fa-solid ${iconClass} text-sm flex-shrink-0"></i>
+    <span class="font-medium">${message}</span>
+  `;
+
+  container.appendChild(toast);
+
+  // Animación de entrada
+  setTimeout(() => {
+    toast.classList.remove('translate-y-2', 'opacity-0');
+  }, 10);
+
+  // Animación de salida y remoción
+  setTimeout(() => {
+    toast.classList.add('translate-y-2', 'opacity-0');
+    setTimeout(() => toast.remove(), 300);
+  }, 4500);
+}
+
+// =============================================================================
+// INICIALIZACIÓN DEL MAPA LEAFLET & OPTIMIZACIÓN DE TILES
 // =============================================================================
 function initMap() {
   state.map = L.map('map', {
     zoomControl: true,
-    attributionControl: false
+    attributionControl: false,
+    minZoom: 4,
+    maxZoom: 19
   }).setView([state.userLat, state.userLng], 13);
 
-  // Capa base de OpenStreetMap (Costo $0 USD)
+  // Capa base de OpenStreetMap con fallback rápido y configuración de tiles
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    tileSize: 256,
+    zoomOffset: 0,
+    minZoom: 4,
     maxZoom: 19,
+    subdomains: ['a', 'b', 'c'],
+    crossOrigin: true,
     attribution: '© OpenStreetMap contributors'
   }).addTo(state.map);
+
+  // Recalibración del tamaño del canvas de Leaflet.js
+  setTimeout(() => {
+    if (state.map) state.map.invalidateSize();
+  }, 200);
+
+  setTimeout(() => {
+    if (state.map) state.map.invalidateSize();
+  }, 600);
+
+  // Recalibrar al redimensionar la ventana
+  window.addEventListener('resize', () => {
+    if (state.map) state.map.invalidateSize();
+  });
 
   // Capa para agrupar y limpiar marcadores de centros
   state.markersLayer = L.layerGroup().addTo(state.map);
@@ -296,44 +356,124 @@ function renderErrorFallback(msg) {
 }
 
 // =============================================================================
-// GEOLOCALIZACIÓN NATIVA DEL NAVEGADOR (HTML5 GEOLOCATION API)
+// GEOLOCALIZACIÓN NATIVA DEL NAVEGADOR & BÚSQUEDA MANUAL DE ZONA
 // =============================================================================
 function handleGetGeolocation() {
+  const btn = document.getElementById('btnGeoHeader');
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-sm"></i> Localizando...';
+    btn.disabled = true;
+  }
+
+  const handleFallback = (reason) => {
+    console.warn('Geolocalización GPS fallback:', reason);
+    showToast('No se pudo obtener tu ubicación exacta. Mostrando centros cercanos a la zona general.', 'warning');
+    if (btn) {
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+    }
+    // Asegura el mapa en coordenada por defecto y recalibra canvas
+    if (state.map) {
+      state.map.flyTo([state.userLat, state.userLng], 13, { duration: 1.2 });
+      setTimeout(() => state.map.invalidateSize(), 200);
+    }
+    updateUserMarker();
+    fetchNearbyCenters();
+  };
+
   if (!navigator.geolocation) {
-    alert('Tu navegador no soporta geolocalización GPS.');
+    handleFallback('Navegador sin soporte de geolocalización');
     return;
   }
 
-  const btn = document.getElementById('btnGeoHeader');
-  const originalHtml = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-sm"></i> Localizando...';
-  btn.disabled = true;
+  try {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        try {
+          state.userLat = position.coords.latitude;
+          state.userLng = position.coords.longitude;
 
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      state.userLat = position.coords.latitude;
-      state.userLng = position.coords.longitude;
+          if (state.map) {
+            state.map.flyTo([state.userLat, state.userLng], 14, { duration: 1.5 });
+            setTimeout(() => state.map.invalidateSize(), 200);
+          }
+          updateUserMarker();
+          fetchNearbyCenters();
+          showToast('Ubicación GPS detectada correctamente.', 'info');
+        } catch (err) {
+          handleFallback(err.message);
+        } finally {
+          if (btn) {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+          }
+        }
+      },
+      (error) => {
+        handleFallback(error.message);
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
+    );
+  } catch (err) {
+    handleFallback(err.message);
+  }
+}
 
-      state.map.flyTo([state.userLat, state.userLng], 14, { duration: 1.5 });
-      updateUserMarker();
-      fetchNearbyCenters();
+async function handleManualSearch() {
+  const input = document.getElementById('citySearchInput');
+  const query = input ? input.value.trim() : '';
+  if (!query) {
+    showToast('Ingresa una ciudad, colonia o código postal para buscar.', 'info');
+    return;
+  }
 
-      btn.innerHTML = originalHtml;
-      btn.disabled = false;
-    },
-    (error) => {
-      console.warn('Error en GPS navegador:', error);
-      alert('No se pudo obtener la ubicación GPS (permiso denegado o no disponible). Se utilizará la ubicación por defecto.');
-      btn.innerHTML = originalHtml;
-      btn.disabled = false;
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
+  const btn = document.getElementById('btnCitySearch');
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xs"></i>';
+
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Mexico')}&limit=1`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) {
+        state.userLat = parseFloat(data[0].lat);
+        state.userLng = parseFloat(data[0].lon);
+
+        if (state.map) {
+          state.map.flyTo([state.userLat, state.userLng], 13, { duration: 1.2 });
+          setTimeout(() => state.map.invalidateSize(), 200);
+        }
+        updateUserMarker();
+        fetchNearbyCenters();
+        const shortName = data[0].display_name.split(',')[0];
+        showToast(`Ubicación actualizada: ${shortName}`, 'info');
+        return;
+      }
+    }
+    showToast('No se encontró la ubicación. Intenta con otra ciudad o código postal.', 'warning');
+  } catch (err) {
+    console.warn('Error en búsqueda geográfica:', err);
+    showToast('No se pudo conectar al servicio de búsqueda geográfica.', 'warning');
+  } finally {
+    if (btn) btn.innerHTML = originalHtml;
+  }
 }
 
 // =============================================================================
-// MODALES Y ACCIONES
+// MODALES Y ACCIONES (SEPARACIÓN ESTRICTA REGISTRO VS PLANES)
 // =============================================================================
+function openRegisterModal(roleType) {
+  // Dispara el formulario de registro directo según el rol indicado
+  if (roleType === 'CENTRO_TRABAJO' || roleType === 'center') {
+    openCenterRegisterModal();
+  } else if (roleType === 'APRENDIZ' || roleType === 'aprendiz') {
+    openAprendizRegisterModal();
+  } else {
+    openRoleSelectModal();
+  }
+}
+
 function handleCenterConnect(centerId) {
   // FLUJO DE VINCULACIÓN EN MODO INVITADO:
   // Si el usuario actual está en MODO INVITADO (sin token JWT activo):
@@ -370,6 +510,7 @@ function closeContactModal() {
 }
 
 function openCenterRegisterModal() {
+  // REGISTRO DE CENTRO: Abre ÚNICAMENTE el formulario de registro del centro
   document.getElementById('registerCenterModal').classList.remove('hidden');
 }
 
@@ -416,6 +557,7 @@ function closeRoleSelectModal() {
 
 function chooseRole(role) {
   closeRoleSelectModal();
+  // El botón "Registrarse" -> "Centro de Trabajo" abre UNICAMENTE el formulario de registro
   if (role === 'aprendiz') {
     openAprendizRegisterModal();
   } else if (role === 'center') {
@@ -875,6 +1017,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('infoModal').classList.remove('hidden');
   });
 
+  // Buscador manual de Ciudad / Código Postal
+  const btnSearch = document.getElementById('btnCitySearch');
+  const inputSearch = document.getElementById('citySearchInput');
+  if (btnSearch) {
+    btnSearch.addEventListener('click', handleManualSearch);
+  }
+  if (inputSearch) {
+    inputSearch.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleManualSearch();
+      }
+    });
+  }
+
   // Botones de presets demo
   document.querySelectorAll('.preset-loc').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -884,6 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.userLng = lng;
 
       state.map.flyTo([lat, lng], 14, { duration: 1.2 });
+      setTimeout(() => state.map.invalidateSize(), 200);
       updateUserMarker();
       fetchNearbyCenters();
     });
